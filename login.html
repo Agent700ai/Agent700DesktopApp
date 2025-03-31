@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://agent700.ai;">
+    <title>Login</title>
+    <link rel="stylesheet" href="styles/login.css" />
+  </head>
+  <body>
+    <div class="agent-login">
+      <div class="login-top">
+        <a href="https://www.agent700.ai/" target="_blank">
+          <img
+            src="assets/agent700_logo_full_dark_hat.svg"
+            alt="Agent700 Logo"
+            style="width: 150px"
+          />
+        </a>
+        <h1 class="top-title">Sign In</h1>
+      </div>
+      <form class="login-form">
+        <!-- <label for="email" class="label-email">Email *</label> -->
+        <div class="field email">
+          <input class="input-email" name="email" type="email" required />
+        </div>
+        <!-- <label for="password" class="label-password"></label> -->
+        <div class="field password">
+          <input
+            class="input-password"
+            name="password"
+            type="password"
+            required
+          />
+        </div>
+        <button type="submit" class="login-submit">Login</button>
+        <div class="login-error"></div>
+      </form>
+      <div class="login-external-links">
+        <div class="not-account">
+          <p>Don't have an account?</p>
+          <a href="https://www.agent700.ai/enterprise-plans/" target="_blank">Sign Up</a>
+        </div>
+        <div class="forgot-password">
+          <a href="https://agent700.ai/forgot-password" target="_blank">Forgot Password?</a>
+        </div>
+      </div>
+    </div>
+    <script defer src="js/renderer.js"></script>
+  </body>
+</html>
