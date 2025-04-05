@@ -55,10 +55,19 @@ class selectAgent {
     this.resetAgentBtn = this.main.querySelector('.reset-chat');
     this.activeAgent = this.main.querySelector('.agent-selector.active');
     this.uploadFileBtn = this.main.querySelector('.chat-bottom-upload');
+    this.uploadContent = this.main.querySelector('.upload-file');
+    this.uploadCancel = this.main.querySelector('.file-close-icon');
+    this.fileName = this.main.querySelector('.file-name');
+    this._showUpload = false;
 
     this.agents.querySelectorAll('.agent-selector').forEach(element => {
       element.addEventListener('click', this.switchActiveAgent.bind(this))
     });
+
+    this.chatInputMsg.disabled = true;
+    this.agentSendBtn.disabled = true;
+    this.agentSendBtn.classList.add("disabled");
+    this.uploadFileBtn.disabled = true;
 
     this.addActions(this.agentId);
   }
@@ -89,7 +98,7 @@ class selectAgent {
           this.displayUserMessage(content);
         } else if (role === "assistant") {
           if(noTypping) {
-            this.displayMessages(content);
+            this.renderBotMarkdown(content);
           }
           else {
             this.displayBotResponseTypingEffect(content);
@@ -103,25 +112,28 @@ class selectAgent {
 
   switchActiveAgent(event) {
     const clickedElement = event.target;
-    
+  
     if (clickedElement.classList.contains("agent-selector")) {
+      this.chatInputMsg.disabled = false;
+      this.agentSendBtn.disabled = false;
+      this.agentSendBtn.classList.remove("disabled");
+      this.uploadFileBtn.disabled = false;
+  
       this.setActiveAgentId = clickedElement.getAttribute("data-agent-id");
       this.conversationHistory = this.loadConversationHistory();
-    }
-    
-    if (clickedElement.classList.contains('agent-selector')) {
+  
       if (!clickedElement.classList.contains('active')) {
         document.querySelectorAll('.agent-selector.active').forEach(el => {
           el.classList.remove('active');
         });
-
+  
         clickedElement.classList.add('active');
         document.querySelector('.chat-header h1').innerText = clickedElement.innerText;
-        
-        this.renderChatHistory(true)
+  
+        this.renderChatHistory(true);
       }
     }
-  }
+  }  
 
   searchAgent() {
     const searchTerm = this.inputSearch.value.toLowerCase();
@@ -175,18 +187,32 @@ class selectAgent {
   }
 
   async postRequest() {
+    if (!this.agentId) {
+      console.error("No agent ID selected.");
+      return;
+    }
+  
+    const validMessages = this.conversationHistory.filter(msg => {
+      return msg.role && msg.content && !msg.content.startsWith("📎 Uploaded file:");
+    });
+  
+    if (validMessages.length === 0) {
+      console.warn("No valid messages to send.");
+      return;
+    }
+  
     const requestData = {
       agentId: this.agentId,
-      messages: this.conversationHistory,
+      messages: validMessages,
     };
-
+  
     try {
       const response = await fetch("https://app.agent700.ai/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
       });
-
+  
       const result = await response.json();
       this.conversationHistory.push({ role: 'assistant', content: result.response || 'No response received' });
       this.displayBotResponseTypingEffect(result.response || 'No response received'); 
@@ -194,7 +220,7 @@ class selectAgent {
     } catch (error) {
       console.error("Request error:", error);
     }
-  }
+  }    
 
   toggleagentSendBtn() {
     if (this.chatInputMsg) {
@@ -323,70 +349,102 @@ class selectAgent {
     typeNextNode();
   }
 
+  renderBotMarkdown(content) {
+    const botResponse = document.createElement("div");
+    botResponse.className = "botResponse";
+  
+    const messageSpan = document.createElement("span");
+    botResponse.appendChild(messageSpan);
+  
+    const timestampSpan = document.createElement("span");
+    timestampSpan.className = "timestamp";
+    timestampSpan.textContent = this.getCurrentTime();
+    botResponse.appendChild(timestampSpan);
+  
+    this.chatBox.appendChild(botResponse);
+    this.chatBox.scrollTop = this.chatBox.scrollHeight;
+  
+    const safeHTML = DOMPurify.sanitize(marked.parse(content));
+    messageSpan.innerHTML = safeHTML;
+  }
+
   uploadFile() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '*/*';
     input.style.display = 'none';
-
+  
     input.onchange = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const fileName = file.name;
-        const fileType = file.type;
-        let extractedText = '';
-
-        if (fileType === 'text/plain') {
-            extractedText = await file.text();
-            this.sendToAPI(extractedText, fileName);
-
-        } else if (file.name.endsWith('.docx')) {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            extractedText = result.value;
-            this.sendToAPI(extractedText, fileName);
-
-        } else if (fileType === 'application/pdf') {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                const pageText = content.items.map(item => item.str).join(' ');
-                extractedText += pageText + '\n';
-            }
-
-            this.sendToAPI(extractedText, fileName);
-
-        } else if (fileType.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const { data: { text } } = await Tesseract.recognize(
-                    e.target.result,
-                    'eng',
-                    {
-                        workerPath: window.electronAPI.workerPath,
-                        corePath: window.electronAPI.corePath
-                    }
-                );
-                this.sendToAPI(text, fileName);
-            };
-            reader.readAsDataURL(file);
-            return;
-
-        } else {
-            alert('Unsupported file type');
-            return;
+      if (!this.agentId) {
+        alert("Please select an agent before uploading a file.");
+        return;
+      }
+      
+      const file = event.target.files[0];
+      if (!file) return;
+  
+      const fileName = file.name;
+      const fileType = file.type;
+      let extractedText = '';
+  
+      if (fileType === 'text/plain') {
+        extractedText = await file.text();
+        this.pendingUpload = { text: extractedText, fileName };
+  
+      } else if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        extractedText = result.value;
+        this.pendingUpload = { text: extractedText, fileName };
+  
+      } else if (fileType === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(item => item.str).join(' ');
+          extractedText += pageText + '\\n';
         }
+  
+        this.pendingUpload = { text: extractedText, fileName };
+  
+      } else if (fileType.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const { data: { text } } = await Tesseract.recognize(
+            e.target.result,
+            'eng',
+            {
+              workerPath: window.electronAPI.workerPath,
+              corePath: window.electronAPI.corePath
+            }
+          );
+          this.pendingUpload = { text, fileName };
+          this.showUpload = true;
+          this.chatInputMsg.focus();
+          this.fileName.innerHTML = `${fileName}`;
+        };
+        reader.readAsDataURL(file);
+        return;
+  
+      } else {
+        alert('Unsupported file type');
+        return;
+      }
+  
+      this.showUpload = true;
+      this.chatInputMsg.focus();
+      this.fileName.innerHTML = `${fileName}`;
+      this.agentSendBtn.disabled = false;
+      this.agentSendBtn.classList.remove("disabled");
     };
-
+  
     document.body.appendChild(input);
     input.click();
     document.body.removeChild(input);
   }
-
   
   sendToAPI(text, fileName) {
     const token = sessionStorage.getItem('accessToken');
@@ -425,6 +483,17 @@ class selectAgent {
     }
   }
 
+  set showUpload(value) {
+    this._showUpload = value;
+    
+    if(value) {
+      this.uploadContent.classList.add('show');
+    }
+    else {
+      this.uploadContent.classList.remove('show');
+    }
+  }
+
   addActions(agentId) {
     if (this.agentSendBtn && this.chatInputMsg) {
       this.agentSendBtn.addEventListener("click", () => {
@@ -457,28 +526,63 @@ class selectAgent {
     //clear active chat (by agentId)
     this.resetAgentBtn.addEventListener('click', () => {      
       this.resetChat(true);
+      this.conversationHistory = [{ role: 'system', content: '' }];
+      this.welcomeMessage();
+      this.chatInputMsg.focus();
     });
 
     //upload file btn
     this.uploadFileBtn.addEventListener('click', () => {
+      // this.uploadFile();
+      // this.showUpload = true;
       this.uploadFile();
+    })
+
+    //cancel upload
+    this.uploadCancel.addEventListener('click', () => {
+      this.showUpload = false;
     })
   }
 
   handleSendMessage(activeAgentId) {
+    if (!this.agentId) {
+      console.warn("No agent selected.");
+      return;
+    }
+    
     if (this.chatInputMsg) {
       const userInput = this.chatInputMsg.value.trim();
-      if (userInput) {
-        // Add user message to conversation history
-        this.conversationHistory.push({ role: "user", content: userInput });
-        this.saveConversationHistory(this.agentId);
-        this.displayUserMessage(userInput);
-        this.postRequest();
-        this.chatInputMsg.value = "";
-        this.toggleagentSendBtn();
+  
+      const shouldSend =
+        userInput.length > 0 || this.pendingUpload !== null;
+  
+      if (shouldSend) {
+        // Ensure conversationHistory is initialized
+        if (!this.conversationHistory) {
+          this.conversationHistory = this.loadConversationHistory();
+        }
+  
+        if (userInput.length > 0) {
+          this.conversationHistory.push({ role: "user", content: userInput });
+          this.saveConversationHistory(this.agentId);
+          this.displayUserMessage(userInput);
+          this.postRequest();
+          this.chatInputMsg.value = "";
+          this.toggleagentSendBtn();
+        }
+  
+        if (this.pendingUpload) {
+          const fileMessage = `Uploaded file: ${this.pendingUpload.fileName}`;
+          this.conversationHistory.push({ role: "user", content: fileMessage });
+          this.displayUserMessage(fileMessage);
+          this.sendToAPI(this.pendingUpload.text, this.pendingUpload.fileName);
+          this.pendingUpload = null;
+          this.showUpload = false;
+          this.fileName.innerHTML = '';
+        }
       }
     }
-  }
+  }  
 }
 
 //Events
