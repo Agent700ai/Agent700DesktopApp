@@ -14,7 +14,7 @@ class Login {
         password: this.password.value,
       };
 
-      fetch("https://agent700.ai/api/auth/login", {
+      fetch(window.env.LOGIN_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

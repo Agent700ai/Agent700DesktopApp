@@ -7,3 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     workerPath: pathToFileURL(path.join(__dirname, 'worker.min.js')).href,
     corePath: pathToFileURL(path.join(__dirname, 'tesseract-core.wasm.js')).href
 });
+
+contextBridge.exposeInMainWorld('env', {
+    LOGIN_URL: process.env.LOGIN_URL
+});

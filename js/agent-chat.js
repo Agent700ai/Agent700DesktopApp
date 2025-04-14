@@ -26,7 +26,7 @@ class getAgents {
           if (agent.customShareUrl) {
             const agentDiv = document.createElement("div");
             agentDiv.classList.add("agent-selector");
-            agentDiv.textContent = agent.customShareUrl;
+            agentDiv.textContent = agent.revisions[agent.revisions.length - 1].name;
             agentDiv.setAttribute("data-agent-id", agent.id);
             agentsList.appendChild(agentDiv);
           }
@@ -167,6 +167,7 @@ class selectAgent {
       })
       .then((data) => {
         let introductoryText = data?.revisions[0]?.introductoryText;
+        console.log('introductory', data.revisions[data.revisions.length - 1]);
 
         if (introductoryText && introductoryText != "") {
           this.displayBotResponseTypingEffect(data.revisions[0].introductoryText);

@@ -6,6 +6,7 @@
     "start": "electron ."
   },
   "dependencies": {
-    "electron": "^latest"
+    "dotenv": "^16.5.0",
+    "electron": "^28.1.3"
   }
 }
