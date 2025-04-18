@@ -9,5 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 });
 
 contextBridge.exposeInMainWorld('env', {
-    LOGIN_URL: process.env.LOGIN_URL
+    API_URL: process.env.API_URL
 });

@@ -14,7 +14,7 @@ class Login {
         password: this.password.value,
       };
 
-      fetch(window.env.LOGIN_URL, {
+      fetch(`${window.env.API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

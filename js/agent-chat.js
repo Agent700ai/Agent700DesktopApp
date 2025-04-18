@@ -3,7 +3,7 @@ class getAgents {
     this.agents = document.querySelector(".agents-list");
     let token = sessionStorage.getItem('accessToken');
 
-    fetch("https://agent700.ai/api/agents", {
+    fetch(`${window.env.API_URL}/api/agents`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -156,7 +156,7 @@ class selectAgent {
   }
 
   welcomeMessage() {
-    fetch("https://agent700.ai/api/agents/" + this.getActiveAgentId)
+    fetch(`${window.env.API_URL}/api/agents/` + this.getActiveAgentId)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -165,7 +165,6 @@ class selectAgent {
       })
       .then((data) => {
         let introductoryText = data?.revisions[0]?.introductoryText;
-        console.log('introductory', data.revisions[data.revisions.length - 1]);
 
         if (introductoryText && introductoryText != "") {
           this.displayBotResponseTypingEffect(data.revisions[0].introductoryText);
@@ -206,7 +205,7 @@ class selectAgent {
     };
   
     try {
-      const response = await fetch("https://app.agent700.ai/api/chat", {
+      const response = await fetch(`${window.env.API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
@@ -449,7 +448,7 @@ class selectAgent {
     const token = sessionStorage.getItem('accessToken');
     const key = 'upload.file.' + fileName;
 
-    fetch('https://agent700.ai/api/alignment-data', {
+    fetch(`${window.env.API_URL}/api/alignment-data`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
