@@ -23,13 +23,11 @@ class getAgents {
         agentsList.innerHTML = "";
 
         data.forEach(agent => {
-          if (agent.customShareUrl) {
-            const agentDiv = document.createElement("div");
-            agentDiv.classList.add("agent-selector");
-            agentDiv.textContent = agent.revisions[agent.revisions.length - 1].name;
-            agentDiv.setAttribute("data-agent-id", agent.id);
-            agentsList.appendChild(agentDiv);
-          }
+          const agentDiv = document.createElement("div");
+          agentDiv.classList.add("agent-selector");
+          agentDiv.textContent = agent.revisions[agent.revisions.length - 1].name;
+          agentDiv.setAttribute("data-agent-id", agent.id);
+          agentsList.appendChild(agentDiv);
         });
         this.selectAgent = new selectAgent()
       } else {
