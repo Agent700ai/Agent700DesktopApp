@@ -51,7 +51,10 @@ html, body {
   outline: none;
 }
 
-.aside .agents-list {}
+.aside .agents-list {
+  max-height: 91%;
+  overflow-y: auto;
+}
 
 .aside .agents-list .agent-selector {
   font-size: 14px;
