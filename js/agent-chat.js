@@ -92,6 +92,10 @@ class selectAgent {
 
     if (this.conversationHistory.length > 1) {
       this.conversationHistory.forEach(({ role, content }) => {
+        if (role === "user" && content === "{{alignment data}}") {
+          return;
+        }
+        
         if (role === "user") {
           this.displayUserMessage(content);
         } else if (role === "assistant") {
@@ -218,7 +222,7 @@ class selectAgent {
     } catch (error) {
       console.error("Request error:", error);
     }
-  }    
+  }
 
   toggleagentSendBtn() {
     if (this.chatInputMsg) {
@@ -570,13 +574,15 @@ class selectAgent {
         }
   
         if (this.pendingUpload) {
-          const fileMessage = `Uploaded file: ${this.pendingUpload.fileName}`;
-          this.conversationHistory.push({ role: "user", content: fileMessage });
-          this.displayUserMessage(fileMessage);
+          this.conversationHistory.push({ role: "user", content: "{{alignment data}}" });
+
           this.sendToAPI(this.pendingUpload.text, this.pendingUpload.fileName);
+
           this.pendingUpload = null;
           this.showUpload = false;
           this.fileName.innerHTML = '';
+
+          this.saveConversationHistory(this.agentId);
         }
       }
     }
