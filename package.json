@@ -1,0 +1,12 @@
+{
+  "name": "electron-chat-app",
+  "version": "1.0.0",
+  "main": "js/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "electron": "^28.1.3"
+  }
+}
