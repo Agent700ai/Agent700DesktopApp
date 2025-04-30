@@ -90,9 +90,11 @@ class selectAgent {
   renderChatHistory(noTypping) {
     this.resetChat(false);
 
+    const alignmentDataPattern = /^\{\{.+\}\}$/;
+
     if (this.conversationHistory.length > 1) {
       this.conversationHistory.forEach(({ role, content }) => {
-        if (role === "user" && content === "{{alignment data}}") {
+        if (role === "user" && alignmentDataPattern.test(content)) {
           return;
         }
         
@@ -450,7 +452,7 @@ class selectAgent {
   
   sendToAPI(text, fileName) {
     const token = sessionStorage.getItem('accessToken');
-    const key = 'upload.file.' + fileName;
+    const key = fileName;
 
     fetch(`${window.env.API_URL}/api/alignment-data`, {
         method: 'POST',
@@ -574,7 +576,7 @@ class selectAgent {
         }
   
         if (this.pendingUpload) {
-          this.conversationHistory.push({ role: "user", content: "{{alignment data}}" });
+          this.conversationHistory.push({ role: "user", content: `{{${this.pendingUpload.fileName}}}` });
 
           this.sendToAPI(this.pendingUpload.text, this.pendingUpload.fileName);
 
