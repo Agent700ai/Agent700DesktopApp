@@ -47,7 +47,7 @@ The Agent700 Desktop App allows users to authenticate with their Agent700 accoun
 2. Navigate into the project directory and install dependencies:
 
    ```bash
-   npm install
+   sudo npm install
    ```
 
 ## Configuration
