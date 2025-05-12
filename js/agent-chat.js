@@ -162,7 +162,17 @@ class selectAgent {
   }
 
   welcomeMessage() {
-    fetch(`${window.env.API_URL}/api/agents/` + this.getActiveAgentId)
+    let token = sessionStorage?.getItem('accessToken');
+
+    fetch(
+      `${window.env.API_URL}/api/agents/${this.getActiveAgentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+      }
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -170,17 +180,19 @@ class selectAgent {
         return response.json();
       })
       .then((data) => {
-        let introductoryText = data?.revisions[0]?.introductoryText;
-
-        if (introductoryText && introductoryText != "") {
-          this.displayBotResponseTypingEffect(data.revisions[0].introductoryText);
-          this.conversationHistory.push({ role: 'assistant', content: introductoryText || 'No response received' });
+        const introductoryText = data?.revisions?.[0]?.introductoryText;
+        if (introductoryText) {
+          this.displayBotResponseTypingEffect(introductoryText);
+          this.conversationHistory.push({
+            role: 'assistant',
+            content: introductoryText,
+          });
           this.saveConversationHistory(this.getActiveAgentId);
         }
       })
       .catch((error) => {
-        console.error("Error:", error);
-      });
+        console.error('Error:', error);
+      });    
   }
 
   getCurrentTime() {
@@ -211,9 +223,10 @@ class selectAgent {
     };
   
     try {
+      let token = sessionStorage?.getItem('accessToken');
       const response = await fetch(`${window.env.API_URL}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(requestData),
       });
   
@@ -451,7 +464,7 @@ class selectAgent {
   }
   
   sendToAPI(text, fileName) {
-    const token = sessionStorage.getItem('accessToken');
+    const token = sessionStorage?.getItem('accessToken');
     const key = fileName;
 
     fetch(`${window.env.API_URL}/api/alignment-data`, {
