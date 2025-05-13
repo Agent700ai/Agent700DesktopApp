@@ -1,11 +1,14 @@
+/* ======== Base Styles ======== */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&display=swap');
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background-color: #e1e1e1;
 }
 
+/* ======== Layout Structure ======== */
 .agent-container {
   font-family: "Roboto", sans-serif;
   max-width: 100%;
@@ -16,6 +19,7 @@ html, body {
   margin: 10px;
 }
 
+/* ======== Sidebar / Agent List ======== */
 .aside {
   width: 100%;
   height: 100%;
@@ -23,6 +27,7 @@ html, body {
   background-color: #f9f9f9;
 }
 
+/* Agent Search */
 .aside .agent-search {
   width: 100%;
   border-bottom: solid 1px #cccccc;
@@ -36,6 +41,11 @@ html, body {
   padding: 0 20px;
 }
 
+.aside .agent-search .agent-search-input:focus-visible {
+  border: none;
+  outline: none;
+}
+
 .aside .agent-search .agent-search-clear {
   position: absolute;
   right: 10px;
@@ -46,11 +56,7 @@ html, body {
   cursor: pointer;
 }
 
-.aside .agent-search .agent-search-input:focus-visible {
-  border: none;
-  outline: none;
-}
-
+/* Agents List */
 .aside .agents-list {
   max-height: 91%;
   overflow-y: auto;
@@ -74,6 +80,7 @@ html, body {
   opacity: 0.7;
 }
 
+/* ======== Chat Container ======== */
 .chat-container {
   width: 100%;
   max-width: 70%;
@@ -84,6 +91,7 @@ html, body {
   background-color: #FFFFFF;
 }
 
+/* Chat Header */
 .chat-container .chat-header {
   background-color: #f4f4f4;
   height: 70px;
@@ -110,12 +118,17 @@ html, body {
   width: auto;
 }
 
+/* Chat Content Area */
 .chat-container .chat-content {
   height: 100%;
   overflow-x: auto;
   margin-bottom: 30px;
+  scroll-behavior: smooth;
+  position: relative;
+  overflow-y: auto;
 }
 
+/* Chat Bottom / Input Area */
 .chat-container .chat-bottom {
   padding-bottom: 10px;
 }
@@ -194,11 +207,6 @@ html, body {
   display: block;
 }
 
-
-
-
-.chat-container .chat-bottom .chat-bottom-box .chat-bottom-input {}
-
 .chat-container .chat-bottom .chat-bottom-box .chat-bottom-input input {
   max-width: 95%;
   width: 100%;
@@ -213,6 +221,7 @@ html, body {
   border: none;
 }
 
+/* Chat Bottom Tools */
 .chat-container .chat-bottom-tools {
   padding: 0 10px;
   display: flex;
@@ -249,7 +258,8 @@ html, body {
   height: 20px;
 }
 
-/* messages styles */
+/* ======== Message Styles ======== */
+/* User Messages */
 .userMessage {
   background-color: #e9e7e7;
   padding: 10px;
@@ -271,6 +281,7 @@ html, body {
   line-height: 140%;
 }
 
+/* Bot Responses */
 .botResponse {
   background-color: #e9e7e7;
   color: #155724;
@@ -281,6 +292,7 @@ html, body {
   text-align: left;
   line-height: 140%;
   position: relative;
+  overflow-anchor: none;
 }
 
 .botResponse::before {
@@ -292,10 +304,11 @@ html, body {
   line-height: 140%;
 }
 
+/* Message Content and Timestamps */
 .userMessage span,
 .botResponse span {
   display: block;
-  width: 80%;
+  width: 100%;
 }
 
 .userMessage .timestamp,
@@ -308,4 +321,75 @@ html, body {
   bottom: 9px;
   right: 8px;
 }
-/* messages styles */
+
+/* ======== Code Formatting ======== */
+pre {
+  margin: 10px 0;
+  max-width: 100%;
+  overflow: auto;
+}
+
+code {
+  display: block;
+  white-space: pre-wrap;
+  /* Allows text to wrap */
+  word-wrap: break-word;
+  /* Breaks long words if needed */
+  overflow-wrap: break-word;
+  /* Modern version of word-wrap */
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  max-width: 100%;
+}
+
+/* Base styling for user message label */
+.userMessage::before {
+  content: "You";
+  display: block;
+  color: #3e3c3b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 140%;
+}
+
+/* Keep the glow effect for "You" */
+.userMessage.waiting::before {
+  animation: glowEffect 1.5s infinite;
+  color: #0066cc;
+}
+
+/* Animation for the "You" glow effect */
+@keyframes glowEffect {
+  0% {
+    color: #3e3c3b;
+    text-shadow: none;
+  }
+
+  50% {
+    color: #0066cc;
+    text-shadow: 0 0 5px rgba(0, 102, 204, 0.7);
+  }
+
+  100% {
+    color: #3e3c3b;
+    text-shadow: none;
+  }
+}
+
+/* Add sequential dots after "You" */
+.userMessage.waiting::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 10px;
+  left: 33px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0066cc;
+  text-shadow: 0 0 5px rgba(0, 102, 204, 0.7);
+}

@@ -11,32 +11,32 @@ class getAgents {
         "Authorization": `Bearer ${token}`
       },
     })
-    .then((response) => {
+      .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json();
-    })
-    .then((data) => {
-      if (data) {
-        const agentsList = document.querySelector(".agents-list"); 
-        agentsList.innerHTML = "";
+      })
+      .then((data) => {
+        if (data) {
+          const agentsList = document.querySelector(".agents-list");
+          agentsList.innerHTML = "";
 
-        data.forEach(agent => {
-          const agentDiv = document.createElement("div");
-          agentDiv.classList.add("agent-selector");
-          agentDiv.textContent = agent.revisions[agent.revisions.length - 1].name;
-          agentDiv.setAttribute("data-agent-id", agent.id);
-          agentsList.appendChild(agentDiv);
-        });
-        this.selectAgent = new selectAgent()
-      } else {
-        this.errorElement.textContent = "Incorrect.";
-      }
-    })
-    .catch((error) => {
-      console.log("Error in request:", error);
-    });
+          data.forEach(agent => {
+            const agentDiv = document.createElement("div");
+            agentDiv.classList.add("agent-selector");
+            agentDiv.textContent = agent.revisions[agent.revisions.length - 1].name;
+            agentDiv.setAttribute("data-agent-id", agent.id);
+            agentsList.appendChild(agentDiv);
+          });
+          this.selectAgent = new selectAgent()
+        } else {
+          this.errorElement.textContent = "Incorrect.";
+        }
+      })
+      .catch((error) => {
+        console.log("Error in request:", error);
+      });
   }
 }
 
@@ -70,14 +70,14 @@ class selectAgent {
     this.addActions(this.agentId);
   }
 
-  set setActiveAgentId (value) {
+  set setActiveAgentId(value) {
     this.agentId = value;
   }
 
-  get getActiveAgentId () {
+  get getActiveAgentId() {
     return this.agentId;
   }
-  
+
   loadConversationHistory() {
     const history = sessionStorage.getItem(`chatHistory_${this.getActiveAgentId}`);
     return history ? JSON.parse(history) : [{ role: 'system', content: '' }];
@@ -97,11 +97,11 @@ class selectAgent {
         if (role === "user" && alignmentDataPattern.test(content)) {
           return;
         }
-        
+
         if (role === "user") {
           this.displayUserMessage(content);
         } else if (role === "assistant") {
-          if(noTypping) {
+          if (noTypping) {
             this.renderBotMarkdown(content);
           }
           else {
@@ -116,28 +116,28 @@ class selectAgent {
 
   switchActiveAgent(event) {
     const clickedElement = event.target;
-  
+
     if (clickedElement.classList.contains("agent-selector")) {
       this.chatInputMsg.disabled = false;
       this.agentSendBtn.disabled = false;
       this.agentSendBtn.classList.remove("disabled");
       this.uploadFileBtn.disabled = false;
-  
+
       this.setActiveAgentId = clickedElement.getAttribute("data-agent-id");
       this.conversationHistory = this.loadConversationHistory();
-  
+
       if (!clickedElement.classList.contains('active')) {
         document.querySelectorAll('.agent-selector.active').forEach(el => {
           el.classList.remove('active');
         });
-  
+
         clickedElement.classList.add('active');
         document.querySelector('.chat-header h1').innerText = clickedElement.innerText;
-  
+
         this.renderChatHistory(true);
       }
     }
-  }  
+  }
 
   searchAgent() {
     const searchTerm = this.inputSearch.value.toLowerCase();
@@ -155,14 +155,24 @@ class selectAgent {
   resetChat(value) {
     document.querySelector('.chat-content').innerHTML = '';
 
-    if(value) {
+    if (value) {
       // reset chat historial (sessionStorage)
-      sessionStorage.removeItem('chatHistory_'+this.getActiveAgentId);
+      sessionStorage.removeItem('chatHistory_' + this.getActiveAgentId);
     }
   }
 
   welcomeMessage() {
-    fetch(`${window.env.API_URL}/api/agents/` + this.getActiveAgentId)
+    let token = sessionStorage?.getItem('accessToken');
+
+    fetch(
+      `${window.env.API_URL}/api/agents/${this.getActiveAgentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+      }
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -170,16 +180,18 @@ class selectAgent {
         return response.json();
       })
       .then((data) => {
-        let introductoryText = data?.revisions[0]?.introductoryText;
-
-        if (introductoryText && introductoryText != "") {
-          this.displayBotResponseTypingEffect(data.revisions[0].introductoryText);
-          this.conversationHistory.push({ role: 'assistant', content: introductoryText || 'No response received' });
+        const introductoryText = data?.revisions?.[0]?.introductoryText;
+        if (introductoryText) {
+          this.displayBotResponseTypingEffect(introductoryText);
+          this.conversationHistory.push({
+            role: 'assistant',
+            content: introductoryText,
+          });
           this.saveConversationHistory(this.getActiveAgentId);
         }
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error('Error:', error);
       });
   }
 
@@ -195,31 +207,32 @@ class selectAgent {
       console.error("No agent ID selected.");
       return;
     }
-  
+
     const validMessages = this.conversationHistory.filter(msg => {
       return msg.role && msg.content && !msg.content.startsWith("📎 Uploaded file:");
     });
-  
+
     if (validMessages.length === 0) {
       console.warn("No valid messages to send.");
       return;
     }
-  
+
     const requestData = {
       agentId: this.agentId,
       messages: validMessages,
     };
-  
+
     try {
+      let token = sessionStorage?.getItem('accessToken');
       const response = await fetch(`${window.env.API_URL}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(requestData),
       });
-  
+
       const result = await response.json();
       this.conversationHistory.push({ role: 'assistant', content: result.response || 'No response received' });
-      this.displayBotResponseTypingEffect(result.response || 'No response received'); 
+      this.displayBotResponseTypingEffect(result.response || 'No response received');
       this.saveConversationHistory(this.getActiveAgentId);
     } catch (error) {
       console.error("Request error:", error);
@@ -244,7 +257,7 @@ class selectAgent {
     const messageSpan = document.createElement("span");
     messageSpan.textContent = message;
     botResponse.appendChild(messageSpan);
-    
+
     const timestampSpan = document.createElement("span");
     timestampSpan.className = "timestamp";
     timestampSpan.textContent = this.getCurrentTime();
@@ -254,9 +267,10 @@ class selectAgent {
     this.chatBox.scrollTop = this.chatBox.scrollHeight;
   }
 
+
   displayUserMessage(message) {
     const userMessage = document.createElement("div");
-    userMessage.className = "userMessage";
+    userMessage.className = "userMessage waiting";
 
     const messageSpan = document.createElement("span");
     messageSpan.textContent = message;
@@ -267,36 +281,60 @@ class selectAgent {
     timestampSpan.textContent = this.getCurrentTime();
     userMessage.appendChild(timestampSpan);
 
+    // Add to DOM
     this.chatBox.appendChild(userMessage);
-    this.chatBox.scrollTop = this.chatBox.scrollHeight;
+
+    // Store this as the latest user message
+    this.latestUserMessage = userMessage;
+
+    // Immediately scroll this message to top of visible area
+    this.scrollMessageToTop(userMessage);
+  }
+
+  scrollMessageToTop(messageElement) {
+    if (!messageElement) return;
+
+    // Immediately set scroll position
+    const topPosition = messageElement.offsetTop;
+    this.chatBox.scrollTop = topPosition - 20; // 20px padding
+
+    // Then set it again after a short delay to ensure it takes effect
+    setTimeout(() => {
+      this.chatBox.scrollTop = topPosition - 20;
+    }, 10);
+
+    // And one more time after DOM has definitely updated
+    setTimeout(() => {
+      this.chatBox.scrollTop = topPosition - 20;
+    }, 50);
   }
 
   displayBotResponseTypingEffect(response) {
+    // Create bot response element
     const botResponse = document.createElement("div");
     botResponse.className = "botResponse";
-
     const messageSpan = document.createElement("span");
     botResponse.appendChild(messageSpan);
-
     const timestampSpan = document.createElement("span");
     timestampSpan.className = "timestamp";
     timestampSpan.textContent = this.getCurrentTime();
     botResponse.appendChild(timestampSpan);
 
+    // Add to DOM
     this.chatBox.appendChild(botResponse);
-    this.chatBox.scrollTop = this.chatBox.scrollHeight;
+
+    // Make sure latest user message is at the top BEFORE starting typing
+    if (this.latestUserMessage) {
+      this.scrollMessageToTop(this.latestUserMessage);
+    }
 
     // Convert Markdown to sanitized HTML
     const safeHTML = DOMPurify.sanitize(marked.parse(response));
-
-    // Create a temporary container to parse the HTML structure
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = safeHTML;
-
     const nodes = Array.from(tempDiv.childNodes);
     let currentNodeIndex = 0;
     const typingSpeed = 20;
-
     const self = this;
 
     function typeText(node, parentElement, callback) {
@@ -308,13 +346,19 @@ class selectAgent {
       function typeChar() {
         if (charIndex < textContent.length) {
           textNode.textContent += textContent[charIndex];
-          self.chatBox.scrollTop = self.chatBox.scrollHeight;
           charIndex++;
+
+          // Only check scroll position every 10 characters to reduce scroll jumping
+          if (self.latestUserMessage && !window.userHasScrolled && charIndex % 10 === 0) {
+            self.scrollMessageToTop(self.latestUserMessage);
+          }
+
           setTimeout(typeChar, typingSpeed);
         } else {
           callback();
         }
       }
+
       typeChar();
     }
 
@@ -324,7 +368,6 @@ class selectAgent {
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node.cloneNode(false);
         parentElement.appendChild(element);
-
         const childNodes = Array.from(node.childNodes);
         let childIndex = 0;
 
@@ -348,28 +391,44 @@ class selectAgent {
         const currentNode = nodes[currentNodeIndex];
         currentNodeIndex++;
         typeNode(currentNode, messageSpan, typeNextNode);
-      } else {}
+      } else {
+        // When typing is complete, remove the waiting class from all user messages
+        document.querySelectorAll('.userMessage.waiting').forEach(el => {
+          el.classList.remove('waiting');
+        });
+      }
     }
+
     typeNextNode();
   }
 
   renderBotMarkdown(content) {
     const botResponse = document.createElement("div");
     botResponse.className = "botResponse";
-  
+
     const messageSpan = document.createElement("span");
     botResponse.appendChild(messageSpan);
-  
+
     const timestampSpan = document.createElement("span");
     timestampSpan.className = "timestamp";
     timestampSpan.textContent = this.getCurrentTime();
     botResponse.appendChild(timestampSpan);
-  
+
     this.chatBox.appendChild(botResponse);
-    this.chatBox.scrollTop = this.chatBox.scrollHeight;
-  
+
+    // Make latest user message visible at top if available
+    if (this.latestUserMessage) {
+      this.scrollMessageToTop(this.latestUserMessage);
+    }
+
     const safeHTML = DOMPurify.sanitize(marked.parse(content));
     messageSpan.innerHTML = safeHTML;
+
+    // Remove waiting class from user messages
+    document.querySelectorAll('.userMessage.waiting').forEach(el => {
+      el.classList.remove('waiting');
+    });
+
   }
 
   uploadFile() {
@@ -377,43 +436,43 @@ class selectAgent {
     input.type = 'file';
     input.accept = '*/*';
     input.style.display = 'none';
-  
+
     input.onchange = async (event) => {
       if (!this.agentId) {
         alert("Please select an agent before uploading a file.");
         return;
       }
-      
+
       const file = event.target.files[0];
       if (!file) return;
-  
+
       const fileName = file.name;
       const fileType = file.type;
       let extractedText = '';
-  
+
       if (fileType === 'text/plain') {
         extractedText = await file.text();
         this.pendingUpload = { text: extractedText, fileName };
-  
+
       } else if (file.name.endsWith('.docx')) {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
         extractedText = result.value;
         this.pendingUpload = { text: extractedText, fileName };
-  
+
       } else if (fileType === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  
+
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
           const pageText = content.items.map(item => item.str).join(' ');
           extractedText += pageText + '\\n';
         }
-  
+
         this.pendingUpload = { text: extractedText, fileName };
-  
+
       } else if (fileType.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -432,56 +491,56 @@ class selectAgent {
         };
         reader.readAsDataURL(file);
         return;
-  
+
       } else {
         alert('Unsupported file type');
         return;
       }
-  
+
       this.showUpload = true;
       this.chatInputMsg.focus();
       this.fileName.innerHTML = `${fileName}`;
       this.agentSendBtn.disabled = false;
       this.agentSendBtn.classList.remove("disabled");
     };
-  
+
     document.body.appendChild(input);
     input.click();
     document.body.removeChild(input);
   }
-  
+
   sendToAPI(text, fileName) {
-    const token = sessionStorage.getItem('accessToken');
+    const token = sessionStorage?.getItem('accessToken');
     const key = fileName;
 
     fetch(`${window.env.API_URL}/api/alignment-data`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            key: key,
-            value: text
-        })
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        key: key,
+        value: text
+      })
     })
-    .then(async res => {
+      .then(async res => {
         const responseText = await res.text();
 
         if (!res.ok) {
-            throw new Error(`HTTP ${res.status} - ${responseText}`);
+          throw new Error(`HTTP ${res.status} - ${responseText}`);
         }
 
         const data = JSON.parse(responseText);
-    })
-    .catch(err => {
+      })
+      .catch(err => {
         console.error('API Error:', err);
-    });
+      });
   }
 
   checkToken() {
     this.accessToken = sessionStorage.getItem('accessToken');
-    
+
     if (!this.accessToken) {
       window.location.href = "/login.html";
     }
@@ -489,8 +548,8 @@ class selectAgent {
 
   set showUpload(value) {
     this._showUpload = value;
-    
-    if(value) {
+
+    if (value) {
       this.uploadContent.classList.add('show');
     }
     else {
@@ -528,7 +587,7 @@ class selectAgent {
     });
 
     //clear active chat (by agentId)
-    this.resetAgentBtn.addEventListener('click', () => {      
+    this.resetAgentBtn.addEventListener('click', () => {
       this.resetChat(true);
       this.conversationHistory = [{ role: 'system', content: '' }];
       this.welcomeMessage();
@@ -553,19 +612,19 @@ class selectAgent {
       console.warn("No agent selected.");
       return;
     }
-    
+
     if (this.chatInputMsg) {
       const userInput = this.chatInputMsg.value.trim();
-  
+
       const shouldSend =
         userInput.length > 0 || this.pendingUpload !== null;
-  
+
       if (shouldSend) {
         // Ensure conversationHistory is initialized
         if (!this.conversationHistory) {
           this.conversationHistory = this.loadConversationHistory();
         }
-  
+
         if (userInput.length > 0) {
           this.conversationHistory.push({ role: "user", content: userInput });
           this.saveConversationHistory(this.agentId);
@@ -574,7 +633,7 @@ class selectAgent {
           this.chatInputMsg.value = "";
           this.toggleagentSendBtn();
         }
-  
+
         if (this.pendingUpload) {
           this.conversationHistory.push({ role: "user", content: `{{${this.pendingUpload.fileName}}}` });
 
@@ -588,10 +647,23 @@ class selectAgent {
         }
       }
     }
-  }  
+  }
 }
 
 //Events
 document.addEventListener("DOMContentLoaded", () => {
   new getAgents();
+
+  // Detect when user manually scrolls
+  const chatContent = document.querySelector('.chat-content');
+  if (chatContent) {
+    chatContent.addEventListener('scroll', function () {
+      // If user scrolls up (not at bottom)
+      if (this.scrollHeight - this.scrollTop > this.clientHeight + 50) {
+        userHasScrolled = true;
+      } else {
+        userHasScrolled = false;
+      }
+    });
+  }
 });
