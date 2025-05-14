@@ -1,54 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agent Chat</title>
-    <link rel="stylesheet" href="styles/agent-chat.css">
-  </head>
-  <body>
-    <div class="agent-container">
-      <aside class="aside">
-        <div class="agent-search">
-          <input class="agent-search-input" name="search" placeholder="Search agent">
-          <span class="agent-search-clear">X</span>
-        </div>
-        <div class="agents-list">
-          <!-- Dynamic agent list -->
-        </div>
-      </aside>
-      <div class="chat-container">
-        <div class="chat-header">
-          <h1>Agent Name</h1>
-          <button class="reset-chat"><img src="assets/clear-icon.svg"></button>
-        </div>
-        <div class="chat-content"><!-- Dynamic content --></div>
-        <div class="chat-bottom">
-          <div class="chat-bottom-box">
-            
-            <div class="upload-file">
-              <span class="file-close-icon">X</span>
-              <span class="file-icon"><img src="assets/file-icon.svg"></span>
-              <div class="file-data">
-                <span class="file-name">test.txt</span>
-                <span class="file-type">Document</span>
-              </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Chat</title>
+  <link rel="stylesheet" href="styles/agent-chat.css">
+</head>
+
+<body>
+  <div class="agent-container">
+    <aside class="aside">
+      <div class="agent-search">
+        <input class="agent-search-input" name="search" placeholder="Search agent">
+        <span class="agent-search-clear">X</span>
+      </div>
+      <div class="agents-list">
+        <!-- Dynamic agent list -->
+      </div>
+    </aside>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h1>Agent Name</h1>
+        <button class="reset-chat"><img src="assets/clear-icon.svg"></button>
+      </div>
+      <div class="chat-content">
+        <!-- Dynamic content -->
+      </div>
+      <div class="scroll-bottom-button" style="display: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+      </div>
+      <div class="chat-bottom">
+        <div class="chat-bottom-box">
+
+          <div class="upload-file">
+            <span class="file-close-icon">X</span>
+            <span class="file-icon"><img src="assets/file-icon.svg"></span>
+            <div class="file-data">
+              <span class="file-name">test.txt</span>
+              <span class="file-type">Document</span>
             </div>
-            
-            <div class="chat-bottom-input"><input type="text" name="chat-text-input" class="chat-text-input"></div>
-            <div class="chat-bottom-tools">
-              <div class="chat-bottom-upload">+</div>
-              <div class="chat-bottom-send"><button class="agent-send-btn"><img src="assets/up-arrow-icon.svg"></button></div>
+          </div>
+
+          <div class="chat-bottom-input"><input type="text" name="chat-text-input" class="chat-text-input"></div>
+          <div class="chat-bottom-tools">
+            <div class="chat-bottom-upload">+</div>
+            <div class="chat-bottom-send"><button class="agent-send-btn"><img src="assets/up-arrow-icon.svg"></button>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <script defer src="js/marked.min.js"></script>
-    <script defer src="js/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
-    <script defer src="js/agent-chat.js"></script>
-  </body>
+  </div>
+  <script defer src="js/marked.min.js"></script>
+  <script defer src="js/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+  <script defer src="js/agent-chat.js"></script>
+</body>
+
 </html>

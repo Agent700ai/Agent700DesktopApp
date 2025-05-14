@@ -1,3 +1,5 @@
+let userHasScrolled = false;
+
 class getAgents {
   constructor() {
     this.agents = document.querySelector(".agents-list");
@@ -39,7 +41,6 @@ class getAgents {
       });
   }
 }
-
 class selectAgent {
   constructor() {
     this.agents = document.querySelector(".agents-list");
@@ -650,20 +651,76 @@ class selectAgent {
   }
 }
 
+// //Events
+// document.addEventListener("DOMContentLoaded", () => {
+//   new getAgents();
+
+//   // Detect when user manually scrolls
+//   const chatContent = document.querySelector('.chat-content');
+//   if (chatContent) {
+//     chatContent.addEventListener('scroll', function () {
+//       // If user scrolls up (not at bottom)
+//       if (this.scrollHeight - this.scrollTop > this.clientHeight + 50) {
+//         userHasScrolled = true;
+//       } else {
+//         userHasScrolled = false;
+//       }
+//     });
+//   }
+// });
+
 //Events
 document.addEventListener("DOMContentLoaded", () => {
-  new getAgents();
+    new getAgents();
 
-  // Detect when user manually scrolls
-  const chatContent = document.querySelector('.chat-content');
-  if (chatContent) {
-    chatContent.addEventListener('scroll', function () {
-      // If user scrolls up (not at bottom)
-      if (this.scrollHeight - this.scrollTop > this.clientHeight + 50) {
-        userHasScrolled = true;
-      } else {
-        userHasScrolled = false;
-      }
-    });
-  }
+    // Detect when user manually scrolls
+    const chatContent = document.querySelector('.chat-content');
+
+    if (chatContent) {
+        chatContent.addEventListener('scroll', function () {
+            // If user scrolls up (not at bottom)
+            if (this.scrollHeight - this.scrollTop > this.clientHeight + 50) {
+                userHasScrolled = true;
+            } else {
+                userHasScrolled = false;
+            }
+        });
+    }
+
+    // Scroll to bottom button functionality
+    const scrollButton = document.querySelector('.chat-container > .scroll-bottom-button');
+
+    if (chatContent && scrollButton) {
+        // Function to check if we should show the scroll button
+        function checkScrollPosition() {
+            // If scrolled up more than 100px from bottom
+            if (chatContent.scrollHeight - chatContent.scrollTop > chatContent.clientHeight + 100) {
+                scrollButton.style.display = 'flex';
+            } else {
+                scrollButton.style.display = 'none';
+            }
+        }
+
+        // Check scroll position when scrolling
+        chatContent.addEventListener('scroll', checkScrollPosition);
+
+        // Scroll to bottom when button is clicked
+        scrollButton.addEventListener('click', () => {
+            chatContent.scrollTo({
+                top: chatContent.scrollHeight,
+                behavior: 'smooth'
+            });
+        });
+
+        // Check scroll position after content changes
+        const observer = new MutationObserver(() => {
+            checkScrollPosition();
+        });
+
+        // Observe for changes in the chat content
+        observer.observe(chatContent, { childList: true, subtree: true });
+
+        // Initial check
+        checkScrollPosition();
+    }
 });
