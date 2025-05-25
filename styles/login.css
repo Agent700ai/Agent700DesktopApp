@@ -78,6 +78,26 @@
   display: block;
   padding: 8.5px 14px;
 }
+.agent-login .remember-me-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -0.5em 0 0 0;
+}
+.agent-login .remember-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #1890FF;
+}
+.agent-login .remember-me-section label {
+  font-size: 14px;
+  color: #637381;
+  font-family: Public Sans, sans-serif;
+  cursor: pointer;
+  user-select: none;
+}
 .agent-login .login-submit {
   width: 100%;
   height: 36px;
@@ -114,4 +134,15 @@
 }
 .agent-login .login-external-links .forgot-password a {
   font-size: 12px;
+}
+.agent-login .login-external-links .forget-credentials {
+  margin-top: 5px;
+}
+.agent-login .login-external-links .forget-credentials a {
+  font-size: 11px;
+  color: #637381;
+  text-decoration: underline;
+}
+.agent-login .login-external-links .forget-credentials a:hover {
+  color: #1890FF;
 }
