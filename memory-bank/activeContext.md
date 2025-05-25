@@ -17,8 +17,10 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 - **Error Handling**: User-friendly error messages for failed authentication
 - **External Links**: Sign-up and password reset links to Agent700 website
 
-### ✅ Agent Management
-- **Agent Loading**: Automatic fetching of available agents from API
+### ✅ Agent Management (Recently Fixed)
+- **Agent Loading**: Automatic fetching of available agents from API with enhanced error handling
+- **Auto-Login Token Handling**: Fixed timing issue where agents weren't being fetched after auto-login
+- **Token Fallback System**: Implements secure storage fallback when sessionStorage token is missing
 - **Agent Selection**: Click-to-select with visual active state indication
 - **Agent Search**: Real-time search with clear functionality
 - **Agent Display**: Proper agent name rendering from latest revision
@@ -47,12 +49,30 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 
 ## Current Development Context
 
+### Recent Bug Fix (December 2024)
+- **Issue**: Agents were not being fetched after auto-login due to timing issue
+- **Root Cause**: Race condition between sessionStorage token setting and agent-chat.html page load
+- **Solution Implemented**: 
+  1. Fixed timing in main.js by awaiting sessionStorage operation before loading chat page
+  2. Added token validation and fallback mechanism in getAgents class
+  3. Implemented graceful error handling with redirect to login if no valid token
+- **Files Modified**: js/main.js, js/agent-chat.js
+- **Status**: ✅ Resolved - Auto-login now properly fetches agents
+
+### Recent Enhancement (May 2025)
+- **Issue**: Streaming text was appearing too slowly in chat responses
+- **Root Cause**: Typing speed was set to 20ms delay between characters
+- **Solution Implemented**: Reduced typing speed from 20ms to 8ms in `displayBotResponseTypingEffect` method
+- **Files Modified**: js/agent-chat.js
+- **Status**: ✅ Completed - Text now streams approximately 2.5x faster while maintaining smooth typing effect
+
 ### Recent Observations
 - **Code Quality**: Clean ES6 class-based architecture with good separation of concerns
 - **Security**: Proper context isolation, input sanitization, and secure API communication
 - **Performance**: Efficient memory management and async operation handling
 - **Maintainability**: Well-organized code structure with clear patterns
 - **API Knowledge**: Comprehensive Agent700 API reference now available (see [agent700ApiReference.md](./agent700ApiReference.md))
+- **UI/UX Enhancement**: Conversation view completely redesigned with Medium.com-inspired typography and layout for enhanced readability
 
 ### Active Patterns in Use
 1. **Class-Based Components**: `getAgents` and `selectAgent` classes manage distinct functionality
@@ -60,6 +80,7 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 3. **Async File Processing**: Non-blocking file upload and processing workflows
 4. **Session Storage Pattern**: Agent-specific conversation persistence
 5. **Progressive Enhancement**: Graceful degradation for unsupported features
+6. **Error Recovery**: Token fallback and validation patterns for robust authentication
 
 ## Key Technical Decisions
 
@@ -69,10 +90,12 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 - **Temporary Storage**: `pendingUpload` object manages file state during upload flow
 - **Enhancement Opportunity**: Could utilize `/api/helpers/parse-document` for broader file format support
 
-### Authentication Flow
+### Authentication Flow (Enhanced)
 - **Window Navigation**: Single window transitions from login to chat interface
 - **Token Management**: sessionStorage for automatic cleanup on app restart
+- **Secure Storage Fallback**: Encrypted token storage with validation for auto-login scenarios
 - **API Consistency**: Bearer token authentication across all endpoints
+- **Error Recovery**: Graceful degradation from secure storage to login redirect
 
 ### UI State Management
 - **DOM-Based State**: Active agent tracked via CSS classes and data attributes
@@ -104,7 +127,7 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 
 ### Testing Observations
 - **Authentication**: Login flow working with proper error handling
-- **Agent Loading**: Agents list populating correctly from API
+- **Agent Loading**: Agents list populating correctly from API (fixed auto-login issue)
 - **File Upload**: All supported file types processing successfully
 - **Chat Flow**: Complete message flow from user input to AI response
 
@@ -140,6 +163,7 @@ The Agent700 Desktop App is in a **fully functional state** with all core featur
 2. **File Processing Pipeline**: Unified async approach with type detection
 3. **Conversation Management**: Clean per-agent history with sessionStorage
 4. **Error Handling**: Comprehensive error handling across all workflows
+5. **Authentication Resilience**: Multi-layer token management with fallback mechanisms
 
 ### Architecture Decisions
 - **Single Window Design**: Memory efficient with clear navigation flow

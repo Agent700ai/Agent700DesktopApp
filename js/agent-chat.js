@@ -1,8 +1,86 @@
 class getAgents {
   constructor() {
     this.agents = document.querySelector(".agents-list");
+    
+    // Add loading state immediately
+    this.showLoadingState();
+    
     let token = sessionStorage.getItem('accessToken');
 
+    debugLogger.info('RENDERER:agent-chat', 'getAgents constructor - token found:', !!token);
+
+    // Check if token exists, if not try to handle missing token
+    if (!token) {
+      debugLogger.info('RENDERER:agent-chat', 'No token in sessionStorage, handling missing token...');
+      this.handleMissingToken();
+      return;
+    }
+
+    this.fetchAgents(token);
+  }
+
+  showLoadingState() {
+    if (this.agents) {
+      this.agents.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Loading agents...</div>';
+    }
+  }
+
+  showErrorState(message) {
+    if (this.agents) {
+      this.agents.innerHTML = `<div style="padding: 20px; text-align: center; color: #ff6b6b;">
+        <div>Error: ${message}</div>
+        <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 10px;">Retry</button>
+      </div>`;
+    }
+  }
+
+  async handleMissingToken() {
+    debugLogger.warn('RENDERER:agent-chat', 'No access token found in sessionStorage');
+    
+    // Try to get token from secure storage as fallback
+    try {
+      debugLogger.info('RENDERER:agent-chat', 'Attempting to retrieve stored token...');
+      const storedToken = await window.electronAPI.retrieveToken();
+      
+      if (storedToken) {
+        debugLogger.info('RENDERER:agent-chat', 'Found stored token, validating...');
+        
+        // Validate the stored token
+        const response = await fetch(`${window.env.API_URL}/api/agents`, {
+          headers: {
+            'Authorization': `Bearer ${storedToken}`,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          debugLogger.info('RENDERER:agent-chat', 'Stored token is valid, using it');
+          // Token is valid, store it in sessionStorage and fetch agents
+          sessionStorage.setItem('accessToken', storedToken);
+          this.fetchAgents(storedToken);
+          return;
+        } else {
+          debugLogger.warn('RENDERER:agent-chat', 'Stored token is invalid, status:', response.status);
+        }
+      } else {
+        debugLogger.info('RENDERER:agent-chat', 'No stored token found');
+      }
+    } catch (error) {
+      debugLogger.error('RENDERER:agent-chat', 'Failed to retrieve stored token:', error.message);
+    }
+    
+    // If we get here, no valid token is available, navigate to login using IPC
+    debugLogger.info('RENDERER:agent-chat', 'No valid token found, navigating to login');
+    this.showErrorState('Authentication required');
+    
+    setTimeout(() => {
+      window.electronAPI.navigateToLogin();
+    }, 2000);
+  }
+
+  fetchAgents(token) {
+    debugLogger.info('RENDERER:agent-chat', 'Fetching agents with token...');
+    
     fetch(`${window.env.API_URL}/api/agents`, {
       method: "GET",
       headers: {
@@ -12,13 +90,17 @@ class getAgents {
       },
     })
     .then((response) => {
+        debugLogger.info('RENDERER:agent-chat', 'Agents API response status:', response.status);
+        
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json();
     })
     .then((data) => {
-      if (data) {
+      debugLogger.info('RENDERER:agent-chat', 'Agents data received:', data?.length || 0, 'agents');
+      
+      if (data && Array.isArray(data) && data.length > 0) {
         const agentsList = document.querySelector(".agents-list"); 
         agentsList.innerHTML = "";
 
@@ -29,45 +111,71 @@ class getAgents {
           agentDiv.setAttribute("data-agent-id", agent.id);
           agentsList.appendChild(agentDiv);
         });
-        this.selectAgent = new selectAgent()
+        
+        debugLogger.info('RENDERER:agent-chat', 'Agents rendered successfully, initializing selectAgent...');
+        this.selectAgent = new selectAgent();
+        
       } else {
-        this.errorElement.textContent = "Incorrect.";
+        debugLogger.warn('RENDERER:agent-chat', 'No agents data received or empty array');
+        this.showErrorState('No agents available');
       }
     })
     .catch((error) => {
-      console.log("Error in request:", error);
+      debugLogger.error('RENDERER:agent-chat', 'Error fetching agents:', error.message);
+      this.showErrorState('Failed to load agents');
+      
+      // If there's an error fetching agents, also try to navigate to login
+      debugLogger.info('RENDERER:agent-chat', 'Error fetching agents, navigating to login in 3 seconds...');
+      setTimeout(() => {
+        window.electronAPI.navigateToLogin();
+      }, 3000);
     });
   }
 }
 
 class selectAgent {
   constructor() {
-    this.agents = document.querySelector(".agents-list");
-    this.main = document.querySelector(".agent-container");
-    this.chatBox = this.main.querySelector(".chat-content");
-    this.chatInputMsg = this.main.querySelector(".chat-text-input");
-    this.agentSendBtn = this.main.querySelector(".agent-send-btn");
-    this.inputSearch = document.querySelector('.agent-search-input');
-    this.clearSearchAgent = document.querySelector('.agent-search-clear');
-    this.agentSelectors = document.querySelectorAll('.agent-selector');
-    this.resetAgentBtn = this.main.querySelector('.reset-chat');
-    this.activeAgent = this.main.querySelector('.agent-selector.active');
-    this.uploadFileBtn = this.main.querySelector('.chat-bottom-upload');
-    this.uploadContent = this.main.querySelector('.upload-file');
-    this.uploadCancel = this.main.querySelector('.file-close-icon');
-    this.fileName = this.main.querySelector('.file-name');
-    this._showUpload = false;
+    try {
+      debugLogger.info('RENDERER:agent-chat', 'Initializing selectAgent...');
+      
+      this.agents = document.querySelector(".agents-list");
+      this.main = document.querySelector(".agent-container");
+      
+      if (!this.main) {
+        debugLogger.error('RENDERER:agent-chat', 'Could not find .agent-container element');
+        return;
+      }
+      
+      this.chatBox = this.main.querySelector(".chat-content");
+      this.chatInputMsg = this.main.querySelector(".chat-text-input");
+      this.agentSendBtn = this.main.querySelector(".agent-send-btn");
+      this.inputSearch = document.querySelector('.agent-search-input');
+      this.clearSearchAgent = document.querySelector('.agent-search-clear');
+      this.agentSelectors = document.querySelectorAll('.agent-selector');
+      this.resetAgentBtn = this.main.querySelector('.reset-chat');
+      this.activeAgent = this.main.querySelector('.agent-selector.active');
+      this.uploadFileBtn = this.main.querySelector('.chat-bottom-upload');
+      this.uploadContent = this.main.querySelector('.upload-file');
+      this.uploadCancel = this.main.querySelector('.file-close-icon');
+      this.fileName = this.main.querySelector('.file-name');
+      this._showUpload = false;
 
-    this.agents.querySelectorAll('.agent-selector').forEach(element => {
-      element.addEventListener('click', this.switchActiveAgent.bind(this))
-    });
+      this.agents.querySelectorAll('.agent-selector').forEach(element => {
+        element.addEventListener('click', this.switchActiveAgent.bind(this))
+      });
 
-    this.chatInputMsg.disabled = true;
-    this.agentSendBtn.disabled = true;
-    this.agentSendBtn.classList.add("disabled");
-    this.uploadFileBtn.disabled = true;
+      this.chatInputMsg.disabled = true;
+      this.agentSendBtn.disabled = true;
+      this.agentSendBtn.classList.add("disabled");
+      this.uploadFileBtn.disabled = true;
 
-    this.addActions(this.agentId);
+      this.addActions(this.agentId);
+      
+      debugLogger.info('RENDERER:agent-chat', 'selectAgent initialized successfully');
+      
+    } catch (error) {
+      debugLogger.error('RENDERER:agent-chat', 'Error initializing selectAgent:', error.message);
+    }
   }
 
   set setActiveAgentId (value) {
@@ -118,6 +226,8 @@ class selectAgent {
     const clickedElement = event.target;
   
     if (clickedElement.classList.contains("agent-selector")) {
+      debugLogger.info('RENDERER:agent-chat', 'Agent selected:', clickedElement.textContent);
+      
       this.chatInputMsg.disabled = false;
       this.agentSendBtn.disabled = false;
       this.agentSendBtn.classList.remove("disabled");
@@ -158,11 +268,14 @@ class selectAgent {
     if(value) {
       // reset chat historial (sessionStorage)
       sessionStorage.removeItem('chatHistory_'+this.getActiveAgentId);
+      debugLogger.info('RENDERER:agent-chat', 'Chat history cleared for agent:', this.getActiveAgentId);
     }
   }
 
   welcomeMessage() {
     let token = sessionStorage?.getItem('accessToken');
+
+    debugLogger.info('RENDERER:agent-chat', 'Loading welcome message for agent:', this.getActiveAgentId);
 
     fetch(
       `${window.env.API_URL}/api/agents/${this.getActiveAgentId}`,
@@ -182,6 +295,7 @@ class selectAgent {
       .then((data) => {
         const introductoryText = data?.revisions?.[0]?.introductoryText;
         if (introductoryText) {
+          debugLogger.debug('RENDERER:agent-chat', 'Welcome message loaded successfully');
           this.displayBotResponseTypingEffect(introductoryText);
           this.conversationHistory.push({
             role: 'assistant',
@@ -191,7 +305,7 @@ class selectAgent {
         }
       })
       .catch((error) => {
-        console.error('Error:', error);
+        debugLogger.error('RENDERER:agent-chat', 'Error loading welcome message:', error.message);
       });    
   }
 
@@ -204,7 +318,7 @@ class selectAgent {
 
   async postRequest() {
     if (!this.agentId) {
-      console.error("No agent ID selected.");
+      debugLogger.error('RENDERER:agent-chat', 'No agent ID selected for chat request');
       return;
     }
   
@@ -213,9 +327,11 @@ class selectAgent {
     });
   
     if (validMessages.length === 0) {
-      console.warn("No valid messages to send.");
+      debugLogger.warn('RENDERER:agent-chat', 'No valid messages to send');
       return;
     }
+
+    debugLogger.info('RENDERER:agent-chat', 'Sending chat request with', validMessages.length, 'messages');
   
     const requestData = {
       agentId: this.agentId,
@@ -231,11 +347,12 @@ class selectAgent {
       });
   
       const result = await response.json();
+      debugLogger.info('RENDERER:agent-chat', 'Chat response received');
       this.conversationHistory.push({ role: 'assistant', content: result.response || 'No response received' });
       this.displayBotResponseTypingEffect(result.response || 'No response received'); 
       this.saveConversationHistory(this.getActiveAgentId);
     } catch (error) {
-      console.error("Request error:", error);
+      debugLogger.error('RENDERER:agent-chat', 'Chat request error:', error.message);
     }
   }
 
@@ -308,7 +425,7 @@ class selectAgent {
 
     const nodes = Array.from(tempDiv.childNodes);
     let currentNodeIndex = 0;
-    const typingSpeed = 20;
+    const typingSpeed = 8;
 
     const self = this;
 
@@ -386,6 +503,8 @@ class selectAgent {
   }
 
   uploadFile() {
+    debugLogger.info('RENDERER:agent-chat', 'File upload initiated');
+    
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '*/*';
@@ -399,63 +518,79 @@ class selectAgent {
       
       const file = event.target.files[0];
       if (!file) return;
+
+      debugLogger.info('RENDERER:agent-chat', 'Processing file upload:', file.name, 'type:', file.type);
   
       const fileName = file.name;
       const fileType = file.type;
       let extractedText = '';
   
-      if (fileType === 'text/plain') {
-        extractedText = await file.text();
-        this.pendingUpload = { text: extractedText, fileName };
-  
-      } else if (file.name.endsWith('.docx')) {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        extractedText = result.value;
-        this.pendingUpload = { text: extractedText, fileName };
-  
-      } else if (fileType === 'application/pdf') {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map(item => item.str).join(' ');
-          extractedText += pageText + '\\n';
-        }
-  
-        this.pendingUpload = { text: extractedText, fileName };
-  
-      } else if (fileType.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const { data: { text } } = await Tesseract.recognize(
-            e.target.result,
-            'eng',
-            {
-              workerPath: window.electronAPI.workerPath,
-              corePath: window.electronAPI.corePath
+      try {
+        if (fileType === 'text/plain') {
+          extractedText = await file.text();
+          this.pendingUpload = { text: extractedText, fileName };
+    
+        } else if (file.name.endsWith('.docx')) {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          extractedText = result.value;
+          this.pendingUpload = { text: extractedText, fileName };
+    
+        } else if (fileType === 'application/pdf') {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items.map(item => item.str).join(' ');
+            extractedText += pageText + '\\n';
+          }
+    
+          this.pendingUpload = { text: extractedText, fileName };
+    
+        } else if (fileType.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const { data: { text } } = await Tesseract.recognize(
+                e.target.result,
+                'eng',
+                {
+                  workerPath: window.electronAPI.workerPath,
+                  corePath: window.electronAPI.corePath
+                }
+              );
+              this.pendingUpload = { text, fileName };
+              this.showUpload = true;
+              this.chatInputMsg.focus();
+              this.fileName.innerHTML = `${fileName}`;
+              debugLogger.info('RENDERER:agent-chat', 'OCR processing completed for:', fileName);
+            } catch (error) {
+              debugLogger.error('RENDERER:agent-chat', 'OCR processing failed:', error.message);
+              alert('Failed to process image: ' + error.message);
             }
-          );
-          this.pendingUpload = { text, fileName };
-          this.showUpload = true;
-          this.chatInputMsg.focus();
-          this.fileName.innerHTML = `${fileName}`;
-        };
-        reader.readAsDataURL(file);
-        return;
-  
-      } else {
-        alert('Unsupported file type');
-        return;
+          };
+          reader.readAsDataURL(file);
+          return;
+    
+        } else {
+          alert('Unsupported file type');
+          debugLogger.warn('RENDERER:agent-chat', 'Unsupported file type:', fileType);
+          return;
+        }
+
+        debugLogger.info('RENDERER:agent-chat', 'File processed successfully:', fileName);
+        this.showUpload = true;
+        this.chatInputMsg.focus();
+        this.fileName.innerHTML = `${fileName}`;
+        this.agentSendBtn.disabled = false;
+        this.agentSendBtn.classList.remove("disabled");
+        
+      } catch (error) {
+        debugLogger.error('RENDERER:agent-chat', 'File processing error:', error.message);
+        alert('Failed to process file: ' + error.message);
       }
-  
-      this.showUpload = true;
-      this.chatInputMsg.focus();
-      this.fileName.innerHTML = `${fileName}`;
-      this.agentSendBtn.disabled = false;
-      this.agentSendBtn.classList.remove("disabled");
     };
   
     document.body.appendChild(input);
@@ -466,6 +601,8 @@ class selectAgent {
   sendToAPI(text, fileName) {
     const token = sessionStorage?.getItem('accessToken');
     const key = fileName;
+
+    debugLogger.info('RENDERER:agent-chat', 'Uploading file content to API:', fileName);
 
     fetch(`${window.env.API_URL}/api/alignment-data`, {
         method: 'POST',
@@ -486,9 +623,10 @@ class selectAgent {
         }
 
         const data = JSON.parse(responseText);
+        debugLogger.info('RENDERER:agent-chat', 'File content uploaded successfully:', fileName);
     })
     .catch(err => {
-        console.error('API Error:', err);
+        debugLogger.error('RENDERER:agent-chat', 'API upload error:', err.message);
     });
   }
 
@@ -496,7 +634,8 @@ class selectAgent {
     this.accessToken = sessionStorage.getItem('accessToken');
     
     if (!this.accessToken) {
-      window.location.href = "/login.html";
+      debugLogger.warn('RENDERER:agent-chat', 'No access token found, navigating to login');
+      window.electronAPI.navigateToLogin();
     }
   }
 
@@ -512,58 +651,76 @@ class selectAgent {
   }
 
   addActions(agentId) {
-    if (this.agentSendBtn && this.chatInputMsg) {
-      this.agentSendBtn.addEventListener("click", () => {
-        this.handleSendMessage(agentId);
-      });
+    try {
+      if (this.agentSendBtn && this.chatInputMsg) {
+        this.agentSendBtn.addEventListener("click", () => {
+          this.handleSendMessage(agentId);
+        });
 
-      this.chatInputMsg.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          if (event.shiftKey) {
-            event.preventDefault();
-            this.chatInputMsg.value += "\n";
-          } else {
-            event.preventDefault();
-            this.handleSendMessage(agentId);
+        this.chatInputMsg.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            if (event.shiftKey) {
+              event.preventDefault();
+              this.chatInputMsg.value += "\n";
+            } else {
+              event.preventDefault();
+              this.handleSendMessage(agentId);
+            }
           }
-        }
-      });
+        });
+
+        // Add input listener for send button toggle
+        this.chatInputMsg.addEventListener("input", () => {
+          this.toggleagentSendBtn();
+        });
+      }
+
+      //input search agent
+      if (this.inputSearch) {
+        this.inputSearch.addEventListener('input', () => {
+          this.searchAgent();
+        });
+      }
+      
+      //clear input agent search
+      if (this.clearSearchAgent) {
+        this.clearSearchAgent.addEventListener('click', () => {
+          this.inputSearch.value = '';
+          this.searchAgent();
+        });
+      }
+
+      //clear active chat (by agentId)
+      if (this.resetAgentBtn) {
+        this.resetAgentBtn.addEventListener('click', () => {      
+          this.resetChat(true);
+          this.conversationHistory = [{ role: 'system', content: '' }];
+          this.welcomeMessage();
+          this.chatInputMsg.focus();
+        });
+      }
+
+      //upload file btn
+      if (this.uploadFileBtn) {
+        this.uploadFileBtn.addEventListener('click', () => {
+          this.uploadFile();
+        });
+      }
+
+      //cancel upload
+      if (this.uploadCancel) {
+        this.uploadCancel.addEventListener('click', () => {
+          this.showUpload = false;
+        });
+      }
+    } catch (error) {
+      debugLogger.error('RENDERER:agent-chat', 'Error adding event listeners:', error.message);
     }
-
-    //input search agent
-    this.inputSearch.addEventListener('input', () => {
-      this.searchAgent();
-    });
-    //clear input agent search
-    this.clearSearchAgent.addEventListener('click', () => {
-      this.inputSearch.value = '';
-      this.searchAgent();
-    });
-
-    //clear active chat (by agentId)
-    this.resetAgentBtn.addEventListener('click', () => {      
-      this.resetChat(true);
-      this.conversationHistory = [{ role: 'system', content: '' }];
-      this.welcomeMessage();
-      this.chatInputMsg.focus();
-    });
-
-    //upload file btn
-    this.uploadFileBtn.addEventListener('click', () => {
-      // this.uploadFile();
-      // this.showUpload = true;
-      this.uploadFile();
-    })
-
-    //cancel upload
-    this.uploadCancel.addEventListener('click', () => {
-      this.showUpload = false;
-    })
   }
 
   handleSendMessage(activeAgentId) {
     if (!this.agentId) {
-      console.warn("No agent selected.");
+      debugLogger.warn('RENDERER:agent-chat', 'No agent selected for sending message');
       return;
     }
     
@@ -580,6 +737,7 @@ class selectAgent {
         }
   
         if (userInput.length > 0) {
+          debugLogger.info('RENDERER:agent-chat', 'Sending user message');
           this.conversationHistory.push({ role: "user", content: userInput });
           this.saveConversationHistory(this.agentId);
           this.displayUserMessage(userInput);
@@ -589,6 +747,7 @@ class selectAgent {
         }
   
         if (this.pendingUpload) {
+          debugLogger.info('RENDERER:agent-chat', 'Processing pending file upload:', this.pendingUpload.fileName);
           this.conversationHistory.push({ role: "user", content: `{{${this.pendingUpload.fileName}}}` });
 
           this.sendToAPI(this.pendingUpload.text, this.pendingUpload.fileName);
@@ -606,5 +765,18 @@ class selectAgent {
 
 //Events
 document.addEventListener("DOMContentLoaded", () => {
-  new getAgents();
+  debugLogger.info('RENDERER:agent-chat', 'DOM loaded, initializing getAgents...');
+  try {
+    new getAgents();
+  } catch (error) {
+    debugLogger.error('RENDERER:agent-chat', 'Error initializing getAgents:', error.message, error.stack);
+    // Show error in UI
+    const agentsList = document.querySelector(".agents-list");
+    if (agentsList) {
+      agentsList.innerHTML = `<div style="padding: 20px; text-align: center; color: #ff6b6b;">
+        <div>Application Error: ${error.message}</div>
+        <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 10px;">Reload</button>
+      </div>`;
+    }
+  }
 });
