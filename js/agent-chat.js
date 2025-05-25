@@ -316,6 +316,55 @@ class selectAgent {
     return `${hours}:${minutes}`;
   }
 
+  showLoadingIndicator() {
+    // Remove any existing loading indicator first
+    this.hideLoadingIndicator();
+    
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "loading-indicator";
+    loadingDiv.id = "chat-loading-indicator";
+
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "loading-message";
+
+    const textSpan = document.createElement("span");
+    textSpan.className = "loading-text";
+    textSpan.textContent = "Agent is typing";
+
+    const dotsSpan = document.createElement("span");
+    dotsSpan.className = "loading-dots";
+
+    // Create animated dots
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("span");
+      dot.textContent = ".";
+      dotsSpan.appendChild(dot);
+    }
+
+    messageDiv.appendChild(textSpan);
+    messageDiv.appendChild(dotsSpan);
+
+    const timestampSpan = document.createElement("span");
+    timestampSpan.className = "timestamp";
+    timestampSpan.textContent = this.getCurrentTime();
+
+    loadingDiv.appendChild(messageDiv);
+    loadingDiv.appendChild(timestampSpan);
+
+    this.chatBox.appendChild(loadingDiv);
+    this.chatBox.scrollTop = this.chatBox.scrollHeight;
+
+    debugLogger.info('RENDERER:agent-chat', 'Loading indicator shown');
+  }
+
+  hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById("chat-loading-indicator");
+    if (loadingIndicator) {
+      loadingIndicator.remove();
+      debugLogger.info('RENDERER:agent-chat', 'Loading indicator hidden');
+    }
+  }
+
   async postRequest() {
     if (!this.agentId) {
       debugLogger.error('RENDERER:agent-chat', 'No agent ID selected for chat request');
@@ -330,6 +379,9 @@ class selectAgent {
       debugLogger.warn('RENDERER:agent-chat', 'No valid messages to send');
       return;
     }
+
+    // Show loading indicator before making the API call
+    this.showLoadingIndicator();
 
     debugLogger.info('RENDERER:agent-chat', 'Sending chat request with', validMessages.length, 'messages');
   
@@ -353,6 +405,8 @@ class selectAgent {
       this.saveConversationHistory(this.getActiveAgentId);
     } catch (error) {
       debugLogger.error('RENDERER:agent-chat', 'Chat request error:', error.message);
+      // Hide loading indicator on error
+      this.hideLoadingIndicator();
     }
   }
 
@@ -402,6 +456,9 @@ class selectAgent {
   }
 
   displayBotResponseTypingEffect(response) {
+    // Hide loading indicator before showing the response
+    this.hideLoadingIndicator();
+    
     const botResponse = document.createElement("div");
     botResponse.className = "botResponse";
 
